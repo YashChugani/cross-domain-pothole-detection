@@ -6,8 +6,9 @@
 
 Give it a road image and it boxes the potholes, grades each close-range pothole **low / medium / high**, and returns a per-image count plus a severity breakdown. The detector works across very different capture conditions (dashcam/far, close-up, tiny/distant, mid-range), and severity is shown **only where it is validated** — distant/tiny potholes still get boxed and tiered, but the tier is clearly marked *uncalibrated* rather than presented as a confident grade. The result is an actionable road-inspection summary, not just bounding boxes.
 
-## Architecture
+## System Architecture
 
+### Architectute Diagram
 ```mermaid
 flowchart TD
     A[Road image / frame] --> B[YOLO11s detector<br/>cross-domain, single-class pothole]
@@ -23,8 +24,17 @@ flowchart TD
     RDD[(4-domain pooled set)] -. offline training .-> B
     SEV[(PothRGBD depth)] -. offline training .-> E
 ```
-
 The two stages are **decoupled**: the detector trains on the pooled 4-domain set, the severity head on PothRGBD (depth-derived labels). Neither training set is present at inference.
+
+
+### Sequence Diagram
+
+The sequence diagram below illustrates the end-to-end execution of a single inference request, from image upload through pothole detection, severity classification, calibration gating, and the final annotated output.
+
+![Sequence diagram of one inference request](docs/figures/sequence.png)
+
+The pipeline first uses YOLO11s to detect potholes. For each detection, the bounding box is expanded, cropped, resized, and normalized before being passed to the ResNet-18 severity head. The calibration gate then determines whether the predicted severity can be presented as calibrated or must be marked uncalibrated. Finally, the Gradio interface returns the annotated image and separate calibrated and uncalibrated severity summaries.
+
 
 ## Two contributions
 
